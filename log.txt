@@ -1,0 +1,11 @@
+git clone https://github.com/ros-controls/ros2_control_demos -b foxy
+
+ros2 launch diffbot_description view_robot.launch.py
+ros2 launch ros2_control_demo_bringup diffbot.launch.py
+ros2 launch ros2_control_demo_bringup diffbot_system.launch.py
+
+# 결국 이게 된다.
+ros2 launch ros2_control_demo_bringup diffbot_system.launch.py
+topic pub to /diffbot_base_controller/cmd_vel_unstamped
+
+sudo apt install ros-foxy-gazebo-ros2-control

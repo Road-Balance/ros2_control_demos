@@ -13,15 +13,13 @@
 # limitations under the License.
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
-from launch.conditions import IfCondition
-from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import Command, FindExecutable, PathJoinSubstitution
+
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-
     # Get URDF via xacro
     robot_description_content = Command(
         [
@@ -46,7 +44,7 @@ def generate_launch_description():
         [FindPackageShare("diffbot_description"), "config", "diffbot.rviz"]
     )
 
-    controller_manager_node = Node(
+    control_node = Node(
         package="controller_manager",
         executable="ros2_control_node",
         parameters=[robot_description, robot_controllers],
@@ -55,14 +53,13 @@ def generate_launch_description():
             "stderr": "screen",
         },
     )
-
-    node_robot_state_publisher = Node(
+    robot_state_pub_node = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
-        output="screen",
+        output="both",
         parameters=[robot_description],
         remappings=[
-            ("/diffbot_base_controller/cmd_vel_unstamped", "/cmd_vel"),
+            ("/diff_drive_controller/cmd_vel_unstamped", "/cmd_vel"),
         ],
     )
 
@@ -74,28 +71,24 @@ def generate_launch_description():
         arguments=["-d", rviz_config_file],
     )
 
-    spawn_dd_controller = Node(
+    joint_state_broadcaster_spawner = Node(
         package="controller_manager",
         executable="spawner.py",
-        arguments=["diffbot_base_controller"],
-        output="screen",
+        arguments=["joint_state_broadcaster", "--controller-manager", "/controller_manager"],
     )
 
-    spawn_jsb_controller = Node(
+    robot_controller_spawner = Node(
         package="controller_manager",
         executable="spawner.py",
-        arguments=["joint_state_broadcaster"],
-        output="screen",
+        arguments=["diffbot_base_controller", "-c", "/controller_manager"],
     )
 
+    nodes = [
+        control_node,
+        robot_state_pub_node,
+        rviz_node,
+        joint_state_broadcaster_spawner,
+        robot_controller_spawner,
+    ]
 
-    return LaunchDescription(
-        [
-            # arg_show_rviz,
-            node_robot_state_publisher,
-            controller_manager_node,
-            spawn_dd_controller,
-            spawn_jsb_controller,
-            rviz_node,
-        ]
-    )
+    return LaunchDescription(nodes)
